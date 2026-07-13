@@ -45,7 +45,6 @@ android {
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
-      signingConfig = signingConfigs.getByName("debugConfig")
     }
   }
   compileOptions {
@@ -59,8 +58,8 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
-// Configure the Secrets Gradle Plugin to use .env and .env.example files
-// to match the convention used in Web projects.
+// Configure the Secrets Gradle Plugin to expose Architect AI config
+// from .env into BuildConfig (ARCHITECT_AI_BASE_URL, ARCHITECT_AI_MODEL).
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
@@ -96,7 +95,7 @@ dependencies {
   implementation(libs.firebase.analytics)
   implementation(libs.firebase.auth)
   implementation(libs.firebase.firestore)
-  // implementation(libs.firebase.ai)
+  // implementation(libs.firebase.ai) // replaced by Architect AI (local gemma4:e2b via Ollama/OkHttp)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)

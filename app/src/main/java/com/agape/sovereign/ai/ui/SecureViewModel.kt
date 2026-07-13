@@ -3,6 +3,7 @@ package com.agape.sovereign.ai.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.agape.sovereign.ai.ai.ArchitectAiClient
 import com.agape.sovereign.ai.data.*
 import com.agape.sovereign.ai.util.BackupCrypto
 import org.json.JSONArray
@@ -76,6 +77,15 @@ class SecureViewModel(application: Application) : AndroidViewModel(application) 
     val overallSecurityScore = MutableStateFlow(84)
     private val _auditResults = MutableStateFlow<List<AuditCheck>>(emptyList())
     val auditResults: StateFlow<List<AuditCheck>> = _auditResults.asStateFlow()
+
+    // ── Architect AI (local gemma4:e2b via Ollama) ────────────────────────────
+    /** true while a local-LLM inference is running */
+    val isArchitectAiLoading = MutableStateFlow(false)
+    /** Last reply produced by Architect AI, or an error string prefixed "ERROR:" */
+    val architectAiReply = MutableStateFlow("")
+    /** Conversation history for the in-app AI chat panel */
+    private val _architectAiHistory = MutableStateFlow<List<Pair<String, String>>>(emptyList())
+    val architectAiHistory: StateFlow<List<Pair<String, String>>> = _architectAiHistory.asStateFlow()
 
     init {
         seedIdentityModulesIfNeeded()
@@ -323,14 +333,18 @@ class SecureViewModel(application: Application) : AndroidViewModel(application) 
             )
             repository.insertMessage(msg)
 
-            // Auto simulated replies after 3 seconds with active notification
-            delay(2000)
-            val replies = listOf(
-                "Message received and integrity verified. Standby.",
-                "Decrypting using your current secure Node key. Proceed.",
-                "E2EE validation matched. E-signature verified successfully."
+            // Ask Architect AI (local gemma4:e2b) to generate a contextual reply
+            val aiReply = ArchitectAiClient.ask(
+                "You are responding to a secure encrypted message in the Aegis Privacy app. " +
+                "The message from $contact says: \"$plainText\". " +
+                "Respond briefly (1-2 sentences) as a privacy-aware assistant confirming secure receipt."
             )
-            val replyText = replies.random()
+            // Fall back to a safe static reply if the local model is offline
+            val replyText = if (aiReply.startsWith("ERROR:")) {
+                "Message received and integrity verified. Secure Node key validated."
+            } else {
+                aiReply
+            }
             val incomingCipher = encryptText(replyText, cipherType)
             val replyMsg = SecureMessage(
                 contactName = contact,
@@ -583,6 +597,70 @@ class SecureViewModel(application: Application) : AndroidViewModel(application) 
         overallSecurityScore.value = scoreAcc.coerceIn(15, 100)
         _auditResults.value = list
     }
+
+    // ── Architect AI public API ───────────────────────────────────────────────
+
+    /**
+     * Send [question] to the local gemma4:e2b model (Ollama) and
+     * surface the reply in [architectAiReply] and [architectAiHistory].
+     *
+     * Token limit is -1 (unlimited) per the Architect AI specification.
+     * The call is fully offline — no data leaves the device.
+     */
+    fun askArchitectAi(question: String) {
+        if (question.isBlank()) return
+        viewModelScope.launch {
+            isArchitectAiLoading.value = true
+            architectAiReply.value = ""
+
+            // Build context from current security state for richer answers
+            val ctx = buildString {
+                append("App: Aegis Privacy (com.agape.sovereign.ai). ")
+                append("Security score: ${overallSecurityScore.value}/100. ")
+                append("Passwords stored: ${passwords.value.size}. ")
+                append("Weak passwords: ${passwords.value.count { it.strength == "WEAK" }}. ")
+                append("Vault items: ${vaultItems.value.size}. ")
+                append("Tracking shield: ${if (isTrackingShieldOn.value) "ON" else "OFF"}. ")
+                append("Offline mode: ${if (isOfflineMode.value) "YES" else "NO"}. ")
+                append("Trackers blocked (session): ${totalTrackersBlocked.value}.")
+            }
+
+            val reply = ArchitectAiClient.analyzePrivacySecurity(ctx, question)
+            architectAiReply.value = reply
+
+            // Append to conversation history (user → assistant)
+            val updated = _architectAiHistory.value.toMutableList()
+            updated.add(Pair("user", question))
+            updated.add(Pair("assistant", reply))
+            _architectAiHistory.value = updated
+
+            isArchitectAiLoading.value = false
+        }
+    }
+
+    /** Clear the Architect AI conversation history. */
+    fun clearArchitectAiHistory() {
+        _architectAiHistory.value = emptyList()
+        architectAiReply.value = ""
+    }
+
+    /**
+     * Ask Architect AI to explain a specific security audit finding and
+     * suggest a concrete fix.  Result is surfaced in [architectAiReply].
+     */
+    fun explainAuditFinding(finding: AuditCheck) {
+        viewModelScope.launch {
+            isArchitectAiLoading.value = true
+            architectAiReply.value = ""
+            val reply = ArchitectAiClient.recommendFix(
+                "${finding.title}: ${finding.description}"
+            )
+            architectAiReply.value = reply
+            isArchitectAiLoading.value = false
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     enum class ImportResult {
         SUCCESS, INVALID_JSON, DECRYPTION_FAILED, EMPTY_BACKUP
