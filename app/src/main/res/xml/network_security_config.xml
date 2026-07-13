@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network security config for com.agape.sovereign.ai.
+
+    Allows cleartext HTTP ONLY to localhost addresses so the Android app can
+    reach the local Architect AI MCP server (port 3001) on the same machine.
+
+      Emulator  → 10.0.2.2  (Android emulator host loopback)
+      Localhost → 127.0.0.1
+      Localhost → localhost
+
+    All other traffic remains HTTPS-only (Android 9+ default).
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Android emulator host loopback -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <!-- Physical device / host via 127.0.0.1 -->
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <!-- Named localhost -->
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

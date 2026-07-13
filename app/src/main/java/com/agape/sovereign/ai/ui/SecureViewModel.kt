@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.agape.sovereign.ai.ai.ArchitectAiClient
+import com.agape.sovereign.ai.ai.ArchitectMcpClient
 import com.agape.sovereign.ai.data.*
 import com.agape.sovereign.ai.util.BackupCrypto
 import org.json.JSONArray
@@ -657,6 +658,110 @@ class SecureViewModel(application: Application) : AndroidViewModel(application) 
             )
             architectAiReply.value = reply
             isArchitectAiLoading.value = false
+        }
+    }
+
+    // ── Architect AI MCP Client public API ───────────────────────────────────
+    //
+    // Uses the REST bridge endpoints on the MCP server (architect-mcp-server).
+    // Falls back gracefully if the dev machine is not running `npm run dev`.
+
+    /** true while an MCP server inference is running */
+    val isMcpLoading = MutableStateFlow(false)
+    /** Last reply from the MCP server, or "ERROR: …" if unavailable */
+    val mcpReply = MutableStateFlow("")
+    /** Whether the MCP server was reachable on the last health check */
+    val mcpServerHealthy = MutableStateFlow<Boolean?>(null)
+
+    /**
+     * Check if the Architect AI MCP server is reachable.
+     * Updates [mcpServerHealthy] state which the UI can observe.
+     */
+    fun checkMcpHealth() {
+        viewModelScope.launch {
+            mcpServerHealthy.value = ArchitectMcpClient.isHealthy()
+        }
+    }
+
+    /**
+     * Ask the MCP server a privacy/security question using the full
+     * Architect AI system prompt and optional live app context.
+     *
+     * Result is surfaced in [mcpReply].
+     */
+    fun mcpAsk(question: String) {
+        if (question.isBlank()) return
+        viewModelScope.launch {
+            isMcpLoading.value = true
+            mcpReply.value = ""
+
+            val ctx = buildString {
+                append("App: Aegis Privacy (com.agape.sovereign.ai). ")
+                append("Security score: ${overallSecurityScore.value}/100. ")
+                append("Passwords stored: ${passwords.value.size}. ")
+                append("Weak passwords: ${passwords.value.count { it.strength == "WEAK" }}. ")
+                append("Vault items: ${vaultItems.value.size}. ")
+                append("Tracking shield: ${if (isTrackingShieldOn.value) "ON" else "OFF"}. ")
+                append("Offline mode: ${if (isOfflineMode.value) "YES" else "NO"}. ")
+                append("Trackers blocked (session): ${totalTrackersBlocked.value}.")
+            }
+
+            val reply = ArchitectMcpClient.ask(question, ctx)
+            mcpReply.value = reply
+            mcpServerHealthy.value = !reply.startsWith("ERROR:")
+            isMcpLoading.value = false
+        }
+    }
+
+    /**
+     * Analyze an identity vector via the MCP server.
+     * Provides NUKED/KNOXED classification + remediation from gemma4:e2b.
+     *
+     * Result is surfaced in [mcpReply].
+     */
+    fun mcpAnalyzeVector(
+        vectorId: String,
+        vectorName: String,
+        rawData: String
+    ) {
+        viewModelScope.launch {
+            isMcpLoading.value = true
+            mcpReply.value = ""
+
+            val reply = ArchitectMcpClient.analyzeVector(
+                vectorId = vectorId,
+                vectorName = vectorName,
+                rawData = rawData,
+                sovereignScore = overallSecurityScore.value
+            )
+            mcpReply.value = reply
+            mcpServerHealthy.value = !reply.startsWith("ERROR:")
+            isMcpLoading.value = false
+        }
+    }
+
+    /**
+     * Generate an audit recommendation via the MCP server for a finding.
+     * Result is surfaced in [mcpReply].
+     */
+    fun mcpAuditRecommendation(finding: AuditCheck) {
+        viewModelScope.launch {
+            isMcpLoading.value = true
+            mcpReply.value = ""
+
+            val severity = when (finding.status) {
+                AuditStatus.DANGER -> "CRITICAL"
+                AuditStatus.WARNING -> "MEDIUM"
+                AuditStatus.SUCCESS -> "LOW"
+            }
+            val reply = ArchitectMcpClient.auditRecommendation(
+                finding = "${finding.title}: ${finding.description}",
+                severity = severity,
+                affectedVectors = listOf("V-general")
+            )
+            mcpReply.value = reply
+            mcpServerHealthy.value = !reply.startsWith("ERROR:")
+            isMcpLoading.value = false
         }
     }
 

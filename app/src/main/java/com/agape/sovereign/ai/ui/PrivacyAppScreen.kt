@@ -380,6 +380,7 @@ fun MainAppLayout(viewModel: SecureViewModel, activeTab: String) {
                     "IDENTITY" -> IdentityScreen(viewModel)
                     "TRACKERS" -> TrackerScreen(viewModel)
                     "AUDIT" -> AuditScreen(viewModel)
+                    "ARCHITECT" -> ArchitectMcpScreen(viewModel)
                 }
             }
         }
@@ -398,7 +399,8 @@ fun BottomNavigationSuite(
         TabItem("MESSAGES", Icons.Default.Send, "Chat"),
         TabItem("IDENTITY", Icons.Default.Face, "Identity"),
         TabItem("TRACKERS", Icons.Default.Warning, "Blocks"),
-        TabItem("AUDIT", Icons.Default.Check, "Audit")
+        TabItem("AUDIT", Icons.Default.Check, "Audit"),
+        TabItem("ARCHITECT", Icons.Default.Psychology, "AI")
     )
 
     Row(
@@ -428,6 +430,7 @@ fun BottomNavigationSuite(
                         when (tab.id) {
                             "DASHBOARD", "AUDIT" -> AccentBlue
                             "PASSWORDS", "IDENTITY" -> AccentMagenta
+                            "ARCHITECT" -> AccentMagenta
                             else -> AccentOrange
                         }
                     } else LightTextMuted,
@@ -4599,6 +4602,402 @@ fun AuditScreen(viewModel: SecureViewModel) {
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+// ── Architect AI MCP Screen ───────────────────────────────────────────────────
+//
+// Connects to the local Architect AI MCP server (Node/Express on :3001) via
+// the REST bridge endpoints.  Works on emulator (10.0.2.2) and physical
+// devices on the same LAN.
+//
+// Required: `npm run dev` inside agape-sovereign/architect-mcp-server/ AND
+//           `ollama serve` with gemma4:e2b pulled.
+
+@Composable
+fun ArchitectMcpScreen(viewModel: SecureViewModel) {
+    val isMcpLoading by viewModel.isMcpLoading.collectAsStateWithLifecycle()
+    val mcpReply by viewModel.mcpReply.collectAsStateWithLifecycle()
+    val mcpServerHealthy by viewModel.mcpServerHealthy.collectAsStateWithLifecycle()
+    val securityScore by viewModel.overallSecurityScore.collectAsStateWithLifecycle()
+    val auditResults by viewModel.auditResults.collectAsStateWithLifecycle()
+
+    var inputText by remember { mutableStateOf("") }
+    var selectedMode by remember { mutableStateOf("ASK") } // ASK | VECTOR | AUDIT
+
+    LaunchedEffect(Unit) {
+        viewModel.checkMcpHealth()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ObsidianBg)
+            .padding(16.dp)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "ARCHITECT AI",
+                    color = AccentMagenta,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 2.sp
+                )
+                Text(
+                    text = "gemma4:e2b  •  MCP Server  •  Offline",
+                    color = LightTextMuted,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+
+            // Health indicator
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        when (mcpServerHealthy) {
+                            true -> AccentBlue.copy(alpha = 0.12f)
+                            false -> AccentMagenta.copy(alpha = 0.12f)
+                            null -> Color.White.copy(alpha = 0.05f)
+                        }
+                    )
+                    .clickable { viewModel.checkMcpHealth() }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .border(
+                        0.5.dp,
+                        when (mcpServerHealthy) {
+                            true -> AccentBlue
+                            false -> AccentMagenta
+                            null -> LightTextMuted
+                        },
+                        RoundedCornerShape(8.dp)
+                    )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(
+                            when (mcpServerHealthy) {
+                                true -> AccentBlue
+                                false -> AccentMagenta
+                                null -> LightTextMuted
+                            }
+                        )
+                )
+                Text(
+                    text = when (mcpServerHealthy) {
+                        true -> "SERVER OK"
+                        false -> "OFFLINE"
+                        null -> "CHECKING"
+                    },
+                    color = LightText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // Mode selector chips
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("ASK" to "Ask AI", "VECTOR" to "Vector Analysis", "AUDIT" to "Audit Fix").forEach { (mode, label) ->
+                val selected = selectedMode == mode
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (selected) AccentMagenta.copy(alpha = 0.2f) else Color.Transparent)
+                        .border(
+                            1.dp,
+                            if (selected) AccentMagenta else LightTextMuted.copy(alpha = 0.3f),
+                            RoundedCornerShape(20.dp)
+                        )
+                        .clickable { selectedMode = mode }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = if (selected) AccentMagenta else LightTextMuted,
+                        fontSize = 11.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        // Quick-action buttons for AUDIT mode
+        if (selectedMode == "AUDIT" && auditResults.isNotEmpty()) {
+            Text(
+                text = "TAP A FINDING TO GENERATE AN AI FIX",
+                color = LightTextMuted,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 1.sp
+            )
+            Spacer(Modifier.height(8.dp))
+            LazyColumn(
+                modifier = Modifier.weight(0.35f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(auditResults.filter { it.status != AuditStatus.SUCCESS }) { check ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(PanelBg)
+                            .border(
+                                0.5.dp,
+                                if (check.status == AuditStatus.DANGER) AccentMagenta else AccentOrange,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .clickable { viewModel.mcpAuditRecommendation(check) }
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (check.status == AuditStatus.DANGER) AccentMagenta else AccentOrange)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(check.title, color = LightText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(check.description, color = LightTextMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Icon(
+                            imageVector = Icons.Default.Psychology,
+                            contentDescription = "Ask Architect",
+                            tint = AccentMagenta,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+
+        // Input area (ASK + VECTOR modes)
+        if (selectedMode != "AUDIT") {
+            OutlinedTextField(
+                value = inputText,
+                onValueChange = { inputText = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(
+                        text = when (selectedMode) {
+                            "ASK" -> "Ask about privacy, security, mobile threats..."
+                            "VECTOR" -> "Describe exposure data or paste scan results..."
+                            else -> ""
+                        },
+                        color = LightTextMuted,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentMagenta,
+                    unfocusedBorderColor = LightTextMuted.copy(alpha = 0.3f),
+                    focusedTextColor = LightText,
+                    unfocusedTextColor = LightText,
+                    cursorColor = AccentMagenta,
+                    focusedContainerColor = PanelBg,
+                    unfocusedContainerColor = PanelBg
+                ),
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 13.sp,
+                    fontFamily = FontFamily.Monospace
+                ),
+                minLines = 3,
+                maxLines = 6
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            Button(
+                onClick = {
+                    if (inputText.isNotBlank()) {
+                        when (selectedMode) {
+                            "ASK" -> viewModel.mcpAsk(inputText)
+                            "VECTOR" -> viewModel.mcpAnalyzeVector(
+                                vectorId = "V-scan",
+                                vectorName = "Manual Scan Input",
+                                rawData = inputText
+                            )
+                        }
+                        inputText = ""
+                    }
+                },
+                enabled = inputText.isNotBlank() && !isMcpLoading,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AccentMagenta,
+                    disabledContainerColor = AccentMagenta.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                if (isMcpLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text("ARCHITECT AI PROCESSING...", fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                } else {
+                    Icon(Icons.Default.Psychology, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = when (selectedMode) {
+                            "ASK" -> "ASK ARCHITECT AI"
+                            "VECTOR" -> "ANALYZE VECTOR"
+                            else -> "SUBMIT"
+                        },
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+        }
+
+        // Reply display
+        if (mcpReply.isNotBlank() || isMcpLoading) {
+            Text(
+                text = "ARCHITECT AI RESPONSE",
+                color = LightTextMuted,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 1.sp
+            )
+            Spacer(Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PanelBg)
+                    .border(
+                        1.dp,
+                        if (mcpReply.startsWith("ERROR:")) AccentMagenta else AccentBlue.copy(alpha = 0.4f),
+                        RoundedCornerShape(10.dp)
+                    )
+                    .padding(14.dp)
+            ) {
+                if (isMcpLoading) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            color = AccentMagenta,
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = "Running gemma4:e2b locally...",
+                            color = LightTextMuted,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                } else {
+                    val isError = mcpReply.startsWith("ERROR:")
+                    LazyColumn {
+                        item {
+                            Text(
+                                text = mcpReply,
+                                color = if (isError) AccentMagenta else LightText,
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.Monospace,
+                                lineHeight = 18.sp
+                            )
+                            if (isError) {
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    text = "Start the server:  cd agape-sovereign/architect-mcp-server && npm run dev",
+                                    color = AccentOrange,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                                Text(
+                                    text = "Android emulator binds to:  http://10.0.2.2:3001",
+                                    color = LightTextMuted,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Empty state
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PanelBg)
+                    .border(0.5.dp, LightTextMuted.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Psychology,
+                        contentDescription = null,
+                        tint = AccentMagenta.copy(alpha = 0.4f),
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        "Architect AI",
+                        color = LightTextMuted,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Text(
+                        "gemma4:e2b  •  MCP Server  •  Offline",
+                        color = LightTextMuted.copy(alpha = 0.6f),
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Score: $securityScore/100",
+                        color = AccentBlue,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

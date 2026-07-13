@@ -3,6 +3,7 @@
   "description": "Zero-knowledge encryption suite providing secure message filters, a credential locker generator, dynamic tracking blockers, and 16 modular identity control profiles.",
   "requestFramePermissions": [],
   "majorCapabilities": [
-    "MAJOR_CAPABILITY_LOCAL_LLM_OFFLINE"
+    "MAJOR_CAPABILITY_LOCAL_LLM_OFFLINE",
+    "MAJOR_CAPABILITY_ARCHITECT_MCP_CLIENT"
   ]
 }
