@@ -1,4 +1,4 @@
-package com.example.data
+package com.agape.sovereign.ai.data
 
 import kotlinx.coroutines.flow.Flow
 

@@ -1,4 +1,4 @@
-package com.example.util
+package com.agape.sovereign.ai.util
 
 import android.util.Base64
 import java.security.MessageDigest

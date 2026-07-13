@@ -1,4 +1,4 @@
-package com.example
+package com.agape.sovereign.ai
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,9 +8,9 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
-import com.example.ui.PrivacyAppScreen
-import com.example.ui.SecureViewModel
-import com.example.ui.theme.MyApplicationTheme
+import com.agape.sovereign.ai.ui.PrivacyAppScreen
+import com.agape.sovereign.ai.ui.SecureViewModel
+import com.agape.sovereign.ai.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: SecureViewModel by viewModels()

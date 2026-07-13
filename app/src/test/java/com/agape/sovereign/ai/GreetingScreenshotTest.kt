@@ -1,12 +1,12 @@
-package com.example
+package com.agape.sovereign.ai
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
-import com.example.ui.BiometricLockScreen
-import com.example.ui.SecureViewModel
-import com.example.ui.theme.MyApplicationTheme
+import com.agape.sovereign.ai.ui.BiometricLockScreen
+import com.agape.sovereign.ai.ui.SecureViewModel
+import com.agape.sovereign.ai.ui.theme.MyApplicationTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule

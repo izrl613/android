@@ -1,10 +1,10 @@
-package com.example.ui
+package com.agape.sovereign.ai.ui
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.*
-import com.example.util.BackupCrypto
+import com.agape.sovereign.ai.data.*
+import com.agape.sovereign.ai.util.BackupCrypto
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.delay

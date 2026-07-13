@@ -1,13 +1,13 @@
-package com.example
+package com.agape.sovereign.ai
 
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import com.example.util.BackupCrypto
-import com.example.ui.generateSecurePassword
-import com.example.ui.evaluatePasswordStrength
+import com.agape.sovereign.ai.util.BackupCrypto
+import com.agape.sovereign.ai.ui.generateSecurePassword
+import com.agape.sovereign.ai.ui.evaluatePasswordStrength
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])

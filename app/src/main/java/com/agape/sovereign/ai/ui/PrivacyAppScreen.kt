@@ -1,4 +1,4 @@
-package com.example.ui
+package com.agape.sovereign.ai.ui
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -46,8 +46,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
-import com.example.data.*
-import com.example.ui.theme.*
+import com.agape.sovereign.ai.data.*
+import com.agape.sovereign.ai.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
