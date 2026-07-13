@@ -1,0 +1,31 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Cryptographic background safety aura shadow drop shadow -->
+    <path
+        android:fillColor="#15000000"
+        android:pathData="M54,26 L80,34 L80,60 C80,80 54,90 54,90 C54,90 28,80 28,60 L28,34 Z" />
+    
+    <!-- Unified Shield Vector Core in Solid Arctic White -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24 L80,32 L80,58 C80,78 54,88 54,88 C54,88 28,78 28,58 L28,32 Z" />
+
+    <!-- Solid Core Safety Lock inside Shield in Obsidian Gray -->
+    <!-- Shackle Loop -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M48,50 v-7 c0,-3.3 2.7,-6 6,-6 c3.3,0 6,2.7 6,6 v7"
+        android:strokeWidth="3.5"
+        android:strokeColor="#13151F" />
+    <!-- Lock Body -->
+    <path
+        android:fillColor="#13151F"
+        android:pathData="M41,49 h26 v20 h-26 z" />
+    <!-- Keyhole -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54 a 2.5,2.5 0 0 1 2,4.1 L57,64 h-6 L52,58.1 a 2.5,2.5 0 0 1 2,-4.1" />
+</vector>
