@@ -23,3 +23,7 @@ my-upload-key.jks
 build_release.sh
 build_log.txt
 build_done.flag
+git_commit_push.sh
+git_log.txt
+cleanup.sh
+cleanup_log.txt
