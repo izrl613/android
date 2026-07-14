@@ -16,3 +16,10 @@
 local.properties
 .env
 debug.keystore
+google-services.json
+my-upload-key.jks
+*.keystore
+/jdk17
+build_release.sh
+build_log.txt
+build_done.flag

@@ -61,8 +61,45 @@ Be concise, direct, and technical. Respond in plain text only (no markdown)."""
      *
      * [maxTokens] = -1 means unlimited (Ollama default behaviour).
      */
+    private suspend fun testOllamaHealth(url: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$url/api/tags")
+                .get()
+                .build()
+            val response = httpClient.newCall(request).execute()
+            response.isSuccessful
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private suspend fun discoverOllamaUrl(): Boolean {
+        if (testOllamaHealth(baseUrl)) return true
+        val candidates = listOf(
+            "http://127.0.0.1:11434",
+            "http://localhost:11434",
+            "http://10.0.2.2:11434"
+        )
+        for (candidate in candidates) {
+            if (candidate != baseUrl && testOllamaHealth(candidate)) {
+                baseUrl = candidate
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Send [userMessage] to the local gemma4:e2b model and return the
+     * assistant's reply string, or an error message prefixed with "ERROR:".
+     *
+     * [maxTokens] = -1 means unlimited (Ollama default behaviour).
+     */
     suspend fun ask(userMessage: String, maxTokens: Int = -1): String =
         withContext(Dispatchers.IO) {
+            discoverOllamaUrl()
+
             try {
                 val bodyJson = JSONObject().apply {
                     put("model", MODEL)
@@ -100,6 +137,43 @@ Be concise, direct, and technical. Respond in plain text only (no markdown)."""
                 root.getJSONObject("message").getString("content").trim()
 
             } catch (e: Exception) {
+                // Try discovering again on failure and retry once
+                if (discoverOllamaUrl()) {
+                    try {
+                        val bodyJson = JSONObject().apply {
+                            put("model", MODEL)
+                            put("stream", false)
+                            put("options", JSONObject().apply {
+                                put("num_predict", maxTokens)
+                                put("temperature", 0.7)
+                            })
+                            put("messages", org.json.JSONArray().apply {
+                                put(JSONObject().apply {
+                                    put("role", "system")
+                                    put("content", SYSTEM_PROMPT)
+                                })
+                                put(JSONObject().apply {
+                                    put("role", "user")
+                                    put("content", userMessage)
+                                })
+                            })
+                        }
+                        val request = Request.Builder()
+                            .url("$baseUrl/api/chat")
+                            .post(bodyJson.toString().toRequestBody(JSON_MEDIA_TYPE))
+                            .build()
+                        val response = httpClient.newCall(request).execute()
+                        if (response.isSuccessful) {
+                            val rawBody = response.body?.string()
+                            if (rawBody != null) {
+                                val root = JSONObject(rawBody)
+                                return@withContext root.getJSONObject("message").getString("content").trim()
+                            }
+                        }
+                    } catch (retryEx: Exception) {
+                        // ignore retry exception
+                    }
+                }
                 "ERROR: $AI_NAME is offline or unreachable (${e.message}). " +
                 "Make sure Ollama is running with: ollama run $MODEL"
             }

@@ -11,6 +11,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -396,7 +400,7 @@ fun BottomNavigationSuite(
         TabItem("DASHBOARD", Icons.Default.Shield, "Defend"),
         TabItem("PASSWORDS", Icons.Default.VpnKey, "Logins"),
         TabItem("VAULT", Icons.Default.Lock, "Vault"),
-        TabItem("MESSAGES", Icons.Default.Send, "Chat"),
+        TabItem("MESSAGES", Icons.AutoMirrored.Filled.Send, "Chat"),
         TabItem("IDENTITY", Icons.Default.Face, "Identity"),
         TabItem("TRACKERS", Icons.Default.Warning, "Blocks"),
         TabItem("AUDIT", Icons.Default.Check, "Audit"),
@@ -462,7 +466,7 @@ fun getDashboardModuleIcon(id: Int): ImageVector {
         6 -> Icons.Default.Build
         7 -> Icons.Default.Home
         8 -> Icons.Default.VpnLock
-        9 -> Icons.Default.Chat
+        9 -> Icons.AutoMirrored.Filled.Chat
         10 -> Icons.Default.Key
         11 -> Icons.Default.Search
         12 -> Icons.Default.Group
@@ -1516,12 +1520,12 @@ fun DashboardScreen(viewModel: SecureViewModel) {
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text("Full Settings", color = LightText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Icon(Icons.Default.ArrowForward, contentDescription = null, tint = LightText, modifier = Modifier.size(12.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = LightText, modifier = Modifier.size(12.dp))
                         }
                     }
                 }
                 
-                Divider(color = Color.White.copy(alpha = 0.06f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
                 
                 // Quick actions and filters
                 Row(
@@ -1805,7 +1809,7 @@ fun DashboardScreen(viewModel: SecureViewModel) {
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Divider(color = Color.White.copy(alpha = 0.06f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (trackingLogs.isEmpty()) {
@@ -3430,7 +3434,7 @@ fun VaultScreen(viewModel: SecureViewModel) {
                     Icon(
                         imageVector = if (draggingType == "SECURE_PHOTO") Icons.Default.Image
                                      else if (draggingType == "SECURE_NOTE") Icons.Default.Description
-                                     else Icons.Default.Article,
+                                     else Icons.AutoMirrored.Filled.Article,
                         contentDescription = null,
                         tint = AccentOrange,
                         modifier = Modifier.size(16.dp)
@@ -3805,7 +3809,7 @@ fun MessagesScreen(viewModel: SecureViewModel) {
                     modifier = Modifier.height(48.dp).testTag("message_send_action"),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Send, contentDescription = "Send secure", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send secure", tint = Color.White)
                 }
             }
         }
@@ -3898,7 +3902,7 @@ fun IdentityScreen(viewModel: SecureViewModel) {
                         textAlign = TextAlign.Center
                     )
 
-                    Divider(color = Color.White.copy(alpha = 0.06f))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
 
                     // MFA Option Toggles as requested
                     Row(
@@ -3943,7 +3947,7 @@ fun IdentityScreen(viewModel: SecureViewModel) {
                         }
                     }
 
-                    Divider(color = Color.White.copy(alpha = 0.06f))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
 
                     Text("Integrity Status", color = LightTextMuted, fontSize = 11.sp)
                     Row(
@@ -4454,7 +4458,7 @@ fun AuditScreen(viewModel: SecureViewModel) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
-                        progress = score / 100f,
+                        progress = { score / 100f },
                         color = when {
                             score >= 80 -> AccentBlue
                             score >= 50 -> AccentOrange

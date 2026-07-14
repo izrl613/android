@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
  * ArchitectMcpClient — Android REST bridge to the Architect AI MCP Server.
  *
  * The MCP server (`architect-mcp-server`) runs on the host machine and exposes
- * plain HTTP POST endpoints under `/android/*` for easy OkHttp consumption.
+ * plain HTTP POST endpoints under `/android/` for easy OkHttp consumption.
  *
  * Architecture:
  *   Android app  ──OkHttp──▶  architect-mcp-server (Node/Express, port 3001)
@@ -48,16 +48,10 @@ object ArchitectMcpClient {
             .build()
     }
 
-    // ── Health ────────────────────────────────────────────────────────────────
-
-    /**
-     * Check if the MCP server and Ollama are reachable.
-     * Returns true if the server responds with status = "ok".
-     */
-    suspend fun isHealthy(): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun testHealth(url: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
-                .url("$baseUrl/android/health")
+                .url("$url/android/health")
                 .get()
                 .build()
             val response = http.newCall(request).execute()
@@ -67,6 +61,29 @@ object ArchitectMcpClient {
         } catch (e: Exception) {
             false
         }
+    }
+
+    /**
+     * Check if the MCP server and Ollama are reachable.
+     * Tries the current [baseUrl] first. If that fails, it checks localhost (in-app server)
+     * and fallback emulator host address, updating [baseUrl] to the first working one.
+     */
+    suspend fun isHealthy(): Boolean = withContext(Dispatchers.IO) {
+        if (testHealth(baseUrl)) return@withContext true
+
+        val candidates = listOf(
+            "http://127.0.0.1:3001",
+            "http://localhost:3001",
+            "http://10.0.2.2:3001"
+        )
+
+        for (candidate in candidates) {
+            if (candidate != baseUrl && testHealth(candidate)) {
+                baseUrl = candidate
+                return@withContext true
+            }
+        }
+        false
     }
 
     // ── ask ───────────────────────────────────────────────────────────────────

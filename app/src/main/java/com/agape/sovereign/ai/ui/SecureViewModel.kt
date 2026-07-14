@@ -12,7 +12,8 @@ import org.json.JSONObject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.util.Random
+import kotlinx.coroutines.isActive
+import kotlin.random.Random
 
 data class TrackingLog(
     val id: String,
@@ -56,7 +57,7 @@ class SecureViewModel(application: Application) : AndroidViewModel(application) 
 
     // Security & Locks
     val biometricLocked = MutableStateFlow(true)
-    val userPin = MutableStateFlow("4209") // Default secure bypass code
+    val userPin = MutableStateFlow("") // Set by user on first launch; no default shipped
     val pinAttempt = MutableStateFlow("")
 
     val showEncryptedToggles = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
@@ -172,16 +173,15 @@ class SecureViewModel(application: Application) : AndroidViewModel(application) 
             val companies = listOf("Google Analytics", "Facebook Graph Tracking", "DoubleClick Pixel", "TikTok Telemetry", "ByteDance AdNode", "Amazon Cloud Ads", "AdRoll Tracker", "AppsFlyer SDK", "Yandex AppMetrica")
             val routes = listOf("/collect?v=2&en=click", "/tr/?id=88319f", "/ad_collector/query", "/pixel/track?event=Page", "/telemetry/v1/event", "/sdk/v3/ping", "/ads/conversion", "/track_install")
 
-            val random = Random()
-            while (true) {
-                delay(4000 + random.nextInt(4000).toLong())
+            while (isActive) {
+                delay(4000 + Random.nextInt(4000).toLong())
                 if (isTrackingShieldOn.value) {
-                    val company = companies[random.nextInt(companies.size)]
-                    val endpoint = routes[random.nextInt(routes.size)]
+                    val company = companies[Random.nextInt(companies.size)]
+                    val endpoint = routes[Random.nextInt(routes.size)]
                     val fullUrl = "https://metrics." + company.lowercase().replace(" ", "") + ".com" + endpoint
 
                     val log = TrackingLog(
-                        id = "TRK_${random.nextInt(100000)}",
+                        id = "TRK_${Random.nextInt(100000)}",
                         url = fullUrl,
                         company = company
                     )

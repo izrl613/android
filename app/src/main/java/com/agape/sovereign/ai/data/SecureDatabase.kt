@@ -24,7 +24,7 @@ abstract class SecureDatabase : RoomDatabase() {
                     SecureDatabase::class.java,
                     "secure_consumer_privacy_db"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance
                 instance
